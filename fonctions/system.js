@@ -1,7 +1,7 @@
 const faunadb = require('faunadb');
 const q = faunadb.query;
 
-const client = new faunadb.Client({ secret: 'VOTRE_CLE_FAUNADB' });
+const client = new faunadb.Client({ secret: '424853576026685643' });
 
 exports.handler = async (event) => {
     try {
