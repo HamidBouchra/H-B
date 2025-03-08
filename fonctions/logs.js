@@ -2,7 +2,7 @@ const faunadb = require('faunadb');
 const q = faunadb.query;
 
 // Configuration FaunaDB (remplacez par votre clé secrète)
-const client = new faunadb.Client({ secret: 'VOTRE_CLE_FAUNADB' });
+const client = new faunadb.Client({ secret: '424853576026685643' });
 
 exports.handler = async (event) => {
     try {
