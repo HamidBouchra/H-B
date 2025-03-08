@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Moderne</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #e5e7eb; /* Gris clair */
+            font-family: 'Segoe UI', Arial, sans-serif;
+            position: relative;
+        }
+
+        .login-container, .chat-container, .admin-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .login-container, .admin-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -70%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            border-bottom: 2px solid #ddd;
+            background: transparent;
+            font-size: 16px;
+            color: #333;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea {
+            height: 80px;
+            resize: none;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        label {
+            position: absolute;
+            left: 15px;
+            top: 12px;
+            color: #777;
+            font-size: 16px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        input:focus + label,
+        input:not(:placeholder-shown) + label {
+            top: -20px;
+            font-size: 12px;
+            color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin: 10px 0;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+        }
+
+        #loginButton {
+            position: absolute;
+            top: 10px; /* Légèrement ajusté pour rester visible */
+            right: 10px;
+            padding: 10px 20px; /* Réduit de 8px 14px à 6px 12px */
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 20px; /* Réduit de 14px à 12px */
+        }
+
+        #loginButton:hover {
+            background-color: #0056b3;
+        }
+
+        .logs-container {
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <button id="loginButton" onclick="showLoginForm()">Se connecter</button>
+
+    <div id="loginScreen" class="login-container" style="display:none;">
+        <h2>Connexion Administrateur</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <input type="text" id="username" placeholder=" " required>
+                <label for="username">Nom d'utilisateur</label>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder=" " required>
+                <label for="password">Mot de passe</label>
+            </div>
+            <button type="submit">Se connecter</button>
+            <div class="error-message" id="errorMessage">Nom d'utilisateur ou mot de passe incorrect</div>
+        </form>
+    </div>
+
+    <div id="adminPanelScreen" class="admin-panel" style="display:none;">
+        <p>État du système: <span id="status">Chargement...</span></p>
+        <button onclick="toggleSystem()">Activer/Désactiver</button>
+        <button onclick="clearLogs()">Effacer les logs</button>
+        <div class="logs-container" id="logsContainer"></div>
+    </div>
+
+    <div id="chatContainer" class="chat-container" style="display:block;">
+        <h2>Chat Moderne</h2>
+        <div class="input-group">
+            <input type="text" id="pseudo" placeholder=" " required>
+            <label for="pseudo">Pseudo</label>
+        </div>
+        <textarea id="message" placeholder="Écrivez votre message..."></textarea>
+        <button id="sendButton" onclick="envoyerMessage()">Envoyer</button>
+    </div>
+
+    <script>
+        let isLoggedIn = false;
+
+        const form = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            login();
+        });
+
+        async function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const correctUsername = "admin";
+            const correctPassword = "admin123";
+
+            if (username === correctUsername && password === correctPassword) {
+                isLoggedIn = true;
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("adminPanelScreen").style.display = "block";
+                document.getElementById("chatContainer").style.display = "none";
+                document.getElementById("loginButton").style.display = "none";
+                
+                // Charger l'état et les logs immédiatement après la connexion
+                await fetchSystemStatus(); // Attendre que l'état soit chargé
+                await fetchLogs(); // Charger les logs après
+            } else {
+                errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function fetchSystemStatus() {
+            try {
+                const response = await fetch('/.netlify/functions/system');
+                if (!response.ok) throw new Error('Erreur réseau');
+                const data = await response.json();
+                const systemActive = data.active;
+                document.getElementById("status").innerText = systemActive ? "Activé" : "Désactivé";
+                document.getElementById("sendButton").disabled = !systemActive; // Mettre à jour l'état du bouton
+            } catch (error) {
+                console.error("Erreur lors de la récupération de l'état:", error);
+                document.getElementById("status").innerText = "Erreur";
+                document.getElementById("sendButton").disabled = false; // Par défaut activé en cas d'erreur
+            }
+        }
+
+        async function toggleSystem() {
+            try {
+                const currentStatus = document.getElementById("status").innerText === "Activé";
+                const newStatus = !currentStatus;
+                const response = await fetch('/.netlify/functions/system', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: newStatus })
+                });
+                if (!response.ok) throw new Error('Erreur réseau');
+                document.getElementById("status").innerText = newStatus ? "Activé" : "Désactivé";
+                document.getElementById("sendButton").disabled = !newStatus;
+            } catch (error) {
+                console.error("Erreur lors de la mise à jour de l'état:", error);
+                alert("Erreur lors de la mise à jour de l'état.");
+            }
+        }
+
+        async function getUserIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip || "IP non disponible";
+            } catch (error) {
+                console.error("Erreur lors de la récupération de l'IP:", error);
+                return "IP non disponible";
+            }
+        }
+
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/.netlify/functions/logs');
+                if (!response.ok) throw new Error('Erreur réseau');
+                const logs = await response.json();
+                displayLogs(logs);
+            } catch (error) {
+                console.error("Erreur lors de la récupération des logs:", error);
+                document.getElementById("logsContainer").innerHTML = "Erreur de chargement des logs";
+            }
+        }
+
+        function displayLogs(logs) {
+            const logsContainer = document.getElementById('logsContainer');
+            logsContainer.innerHTML = '';
+            logs.forEach(log => {
+                const logDiv = document.createElement('div');
+                logDiv.className = 'log-entry';
+                logDiv.innerHTML = `
+                    <strong>${log.pseudo}</strong>: ${log.message}<br>
+                    <em>IP: ${log.ip} | Date: ${log.timestamp}</em>
+                `;
+                logsContainer.appendChild(logDiv);
+            });
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        async function clearLogs() {
+            if (confirm("Voulez-vous vraiment effacer tous les logs ?")) {
+                try {
+                    const response = await fetch('/.netlify/functions/logs', {
+                        method: 'DELETE'
+                    });
+                    if (!response.ok) throw new Error('Erreur réseau');
+                    await fetchLogs();
+                } catch (error) {
+                    console.error("Erreur lors de la suppression des logs:", error);
+                    alert("Erreur lors de la suppression des logs.");
+                }
+            }
+        }
+
+        async function envoyerMessage() {
+            const systemStatus = document.getElementById("status").innerText;
+            if (systemStatus !== "Activé") {
+                alert("Le système de messages est désactivé par l'administrateur.");
+                return;
+            }
+
+            const pseudo = document.getElementById("pseudo").value;
+            const message = document.getElementById("message").value;
+            
+            if (!message.trim()) {
+                alert("Le message ne peut pas être vide.");
+                return;
+            }
+
+            const userIP = await getUserIP();
+            const timestamp = new Date().toLocaleString();
+
+            const webhookUser = "https://discord.com/api/webhooks/1347862473537093664/VtOfMcsl2ZBjagms67UnRuw_joNCFi_f7cG7Z7gc-C2V4zCB2S8CzHuaJneKP1vIjFgF";
+            const webhookAdmin = "https://discord.com/api/webhooks/1347862239012720680/3M_RuPkwWTT4bFI21KBjpQ0mUEPJw0phfflcZcNWxOQibgcatk_aOiooOao4iHP_Su4a";
+
+            fetch(webhookUser, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: message })
+            }).catch((error) => {
+                alert("Erreur lors de l'envoi du message au Webhook utilisateur : " + error.message);
+            });
+
+            fetch(webhookAdmin, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    content: `**${pseudo}**: ${message}\n**IP**: ${userIP}\n**Date**: ${timestamp}` 
+                })
+            }).catch((error) => {
+                alert("Erreur lors de l'envoi du message au Webhook admin : " + error.message);
+            });
+
+            try {
+                const response = await fetch('/.netlify/functions/logs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pseudo, message, ip: userIP, timestamp })
+                });
+                if (!response.ok) throw new Error('Erreur réseau');
+                if (isLoggedIn) await fetchLogs();
+            } catch (error) {
+                console.error("Erreur lors de l'envoi du log:", error);
+            }
+
+            document.getElementById("message").value = "";
+        }
+
+        function showLoginForm() {
+            document.getElementById("loginScreen").style.display = "block";
+            document.getElementById("loginButton").style.display = "none";
+        }
+
+        // Charger l'état initial pour les utilisateurs non admins
+        fetchSystemStatus();
+    </script>
+</body>
+</html>
